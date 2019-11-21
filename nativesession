@@ -1,0 +1,87 @@
+<?php
+
+if (!defined('BASEPATH'))
+    exit('No direct script access allowed');
+
+class Nativesession {
+
+    public function __construct() {
+        session_start();
+    }
+
+    public function set($key, $value) {
+        $_SESSION[$key] = $value;
+    }
+
+    public function get($key) {
+        return isset($_SESSION[$key]) ? $_SESSION[$key] : null;
+    }
+
+    public function regenerateId($delOld = false) {
+        session_regenerate_id($delOld);
+    }
+
+    public function delete($key) {
+        unset($_SESSION[$key]);
+    }
+    
+    function get_client_ip() {
+    $ipaddress = '';
+    if (isset($_SERVER['HTTP_CLIENT_IP']))
+        $ipaddress = $_SERVER['HTTP_CLIENT_IP'];
+    else if(isset($_SERVER['HTTP_X_FORWARDED_FOR']))
+        $ipaddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
+    else if(isset($_SERVER['HTTP_X_FORWARDED']))
+        $ipaddress = $_SERVER['HTTP_X_FORWARDED'];
+    else if(isset($_SERVER['HTTP_FORWARDED_FOR']))
+        $ipaddress = $_SERVER['HTTP_FORWARDED_FOR'];
+    else if(isset($_SERVER['HTTP_FORWARDED']))
+        $ipaddress = $_SERVER['HTTP_FORWARDED'];
+    else if(isset($_SERVER['REMOTE_ADDR']))
+        $ipaddress = $_SERVER['REMOTE_ADDR'];
+    else
+        $ipaddress = 'UNKNOWN';
+    return $ipaddress;
+}
+
+}
+
+$this->load->library(array('nativesession'));
+
+$this->nativesession->delete('is_login');
+
+//login 
+
+$ip_address = $this->nativesession->get_client_ip();
+if ($this->agent->is_browser()) {
+    $agent = $this->agent->browser() . ' ' . $this->agent->version();
+} elseif ($this->agent->is_robot()) {
+    $agent = $this->agent->robot();
+} elseif ($this->agent->is_mobile()) {
+    $agent = $this->agent->mobile();
+} else {
+    $agent = 'Unidentified User Agent';
+}
+$data = array(
+    'user_id' => $userdata->user_id,
+    'id_address' => $ip_address,
+    'agent' => $agent,
+    'login_time' => date('Y-m-d H:i:s'),
+    'is_login' => TRUE
+);
+$this->nativesession->set('is_login', $data);
+if ($this->nativesession->get('is_login')):
+$track_id = $this->track_login($data);
+$data['track_id'] = $track_id;
+$this->nativesession->set('is_login', $data);
+return TRUE;
+endif;
+
+//logout
+if ($this->nativesession->get('is_login')):
+$userinfo = $this->nativesession->get('is_login');
+endif;
+$data['logout_out'] = date('Y-m-d H:i:s');
+$data['is_login'] = FALSE;
+$this->nativesession->delete('is_login');
+redirect('login');
